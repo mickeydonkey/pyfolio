@@ -27,6 +27,7 @@ import numpy as np
 
 from . import pos
 from . import txn
+import tushare as ts
 
 APPROX_BDAYS_PER_MONTH = 21
 APPROX_BDAYS_PER_YEAR = 252
@@ -214,6 +215,42 @@ def get_symbol_from_yahoo(symbol, start=None, end=None):
     rets.columns = [symbol]
     return rets
 
+def get_index_return_from_sina(code, start=None, end=None):
+    """
+
+    Parameters
+    ----------
+    code digital string, like '000300'
+    start
+    end
+
+    Returns pd.DataFrame() with size n*1
+    -------
+
+    """
+    sina_data = ts.get_h_data(code, start=start, end=end, index=True)
+    sina_data.sort_index(ascending=True, inplace=True)
+    sina_data['return'] = sina_data['close'].pct_change()
+    return sina_data[['return']]
+
+def get_index_return_from_ifeng(code, start=None, end=None):
+    """
+
+    Parameters
+    ----------
+    code digital string, like '000300'
+    start
+    end
+
+    Returns pd.DataFrame() with size n*1
+    -------
+
+    """
+    code = 'sh'+code
+    ifeng_data = ts.get_hist_data(code=code, start=start, end=end)
+    ifeng_data.sort_index(ascending=True, inplace=True)
+    ifeng_data['return'] = ifeng_data['close'].pct_change()
+    return ifeng_data[['return']]
 
 def default_returns_func(symbol, start=None, end=None):
     """
