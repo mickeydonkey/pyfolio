@@ -17,7 +17,7 @@ from __future__ import division
 from datetime import datetime
 import errno
 from os import makedirs, environ
-from os.path import expanduser, join, getmtime, isdir
+from os.path import expanduser, join, getmtime, isdir ,realpath, dirname
 import warnings
 
 import pandas as pd
@@ -28,7 +28,7 @@ import numpy as np
 from . import pos
 from . import txn
 import tushare as ts
-
+from collections import deque
 APPROX_BDAYS_PER_MONTH = 21
 APPROX_BDAYS_PER_YEAR = 252
 
@@ -46,18 +46,23 @@ ANNUALIZATION_FACTORS = {
     MONTHLY: MONTHS_PER_YEAR
 }
 
+INDEX_NAME_CODE = {'hs300':'000300',
+                   'zz500':'000905',
+                   'zz800':'000906',
+                   'zz700':'000906',
+                  }
+INDEX_CACHE_URL = {'hs300':'http://7xrcef.com1.z0.glb.clouddn.com/hs300.csv',
+                   'zz500':'http://7xrcef.com1.z0.glb.clouddn.com/zz500.csv',
+                   'zz800':'http://7xrcef.com1.z0.glb.clouddn.com/zz800.csv',
+                   'zz700':'http://7xrcef.com1.z0.glb.clouddn.com/zz700.csv',
+                   }
 
-def cache_dir(environ=environ):
-    try:
-        return environ['PYFOLIO_CACHE_DIR']
-    except KeyError:
-        return join(
-            environ.get(
-                'XDG_CACHE_HOME',
-                expanduser('~/.cache/'),
-            ),
-            'pyfolio',
-        )
+def cache_dir():
+    """
+    return the subdirectory /cache residing in the directory containing utils.py, i.e. /pyfolio/data
+    """
+
+    return join(realpath(dirname(__file__)),'data')
 
 
 def data_path(name):
@@ -129,7 +134,7 @@ def _1_bday_ago():
     return pd.Timestamp.now().normalize() - _1_bday
 
 
-def get_returns_cached(filepath, update_func, latest_dt, **kwargs):
+def get_returns_cached(filepath, update_func, latest_dt, url=None, **kwargs):
     """Get returns from a cached file if the cache is recent enough,
     otherwise, try to retrieve via a provided update function and
     update the cache file.
@@ -151,43 +156,80 @@ def get_returns_cached(filepath, update_func, latest_dt, **kwargs):
         DataFrame containing returns
     """
     update_cache = False
-
+    new_cache = False
     try:
         mtime = getmtime(filepath)
     except OSError as e:
         if e.errno != errno.ENOENT:
             raise
         update_cache = True
+        new_cache = True
     else:
         if pd.Timestamp(mtime, unit='s') < _1_bday_ago():
             update_cache = True
-        else:
-            returns = pd.read_csv(filepath, index_col=0, parse_dates=True)
-            returns.index = returns.index.tz_localize("UTC")
+
 
     if update_cache:
-        returns = update_func(**kwargs)
-        try:
-            ensure_directory(cache_dir())
-        except OSError as e:
-            warnings.warn(
-                'could not update cache: {}. {}: {}'.format(
-                    filepath, type(e).__name__, e,
-                ),
-                UserWarning,
-            )
+        dirty_returns = update_func(**kwargs)
+
+        if new_cache:
+            try:
+                ensure_directory(cache_dir())
+            except OSError as e:
+                warnings.warn(
+                    'could not update cache: {}. {}: {}'.format(
+                        filepath, type(e).__name__, e,
+                    ),
+                    UserWarning,
+                )
+            if url:
+                try:
+                    ret_online = pd.read_csv(url,
+                                        index_col=0,parse_dates=True)
+                    ret_online.to_csv(filepath)
+                except OSError as e:
+                    warnings.warn(
+                        'could not new cache {}. {}: {}'.format(
+                            filepath, type(e).__name__, e,
+                        ),
+                        UserWarning,
+                    )
 
         try:
-            returns.to_csv(filepath)
+            _append_cache_file(filepath,dirty_returns)
         except OSError as e:
             warnings.warn(
-                'could not update cache {}. {}: {}'.format(
+                'could not append cache {}. {}: {}'.format(
                     filepath, type(e).__name__, e,
                 ),
                 UserWarning,
             )
+    returns = pd.read_csv(filepath, index_col=0, parse_dates=True)
+    returns.index = returns.index.tz_localize("UTC")
 
     return returns
+
+def _append_cache_file(filepath,dirty_data):
+    """
+    append uncached data to file
+    Parameters
+    ----------
+    filepath str
+    data DataFrame(,index=Timeindex)
+    like
+    Date,SPY
+    2016-10-01,0.001
+    .........
+    Returns
+    pd.DataFrame returns
+    -------
+
+    """
+    last_line = deque(open(filepath),1)
+    last_record_date = pd.Timestamp(last_line.pop().split(',')[0])
+    fresh_data = dirty_data[dirty_data.index>last_record_date]
+    fresh_data.index = fresh_data.index.tz_localize(None)
+    fresh_data.to_csv(filepath,mode='a',header=False)
 
 
 def get_symbol_from_yahoo(symbol, start=None, end=None):
@@ -229,9 +271,10 @@ def get_index_return_from_sina(code, start=None, end=None):
 
     """
     sina_data = ts.get_h_data(code, start=start, end=end, index=True)
-    sina_data.sort_index(ascending=True, inplace=True)
-    sina_data['return'] = sina_data['close'].pct_change()
-    return sina_data[['return']]
+    rets = sina_data[['close']].pct_change().dropna()
+    rets.index = rets.index.tz_localize("UTC")
+    rets.sort_index(ascending=True, inplace=True)
+    return rets
 
 def get_index_return_from_ifeng(code, start=None, end=None):
     """
@@ -248,9 +291,28 @@ def get_index_return_from_ifeng(code, start=None, end=None):
     """
     code = 'sh'+code
     ifeng_data = ts.get_hist_data(code=code, start=start, end=end)
-    ifeng_data.sort_index(ascending=True, inplace=True)
-    ifeng_data['return'] = ifeng_data['close'].pct_change()
-    return ifeng_data[['return']]
+    rets = ifeng_data[['close']].pct_change().dropna()
+    rets.index = rets.index.astype('datetime64').tz_localize('UTC')
+    rets.sort_index(ascending=True, inplace=True)
+    return rets
+
+def _get_index_return_from_ifeng_then_sina(symbol, start=None, end=None):
+    try:
+        code = INDEX_NAME_CODE.get(symbol)
+    except KeyError as e:
+        if symbol.isdigit():
+            code = symbol
+    try:
+        index_return = get_index_return_from_ifeng(code, start=None, end=None)
+
+    except:
+        try:
+            index_return = get_index_return_from_sina(code, start=None, end=None)
+        except Exception as e:
+            raise e
+    index_return.columns = [symbol]
+    index_return.index.name = 'Date'
+    return index_return
 
 def default_returns_func(symbol, start=None, end=None):
     """
@@ -293,6 +355,51 @@ def default_returns_func(symbol, start=None, end=None):
         rets = rets[start:end]
     else:
         rets = get_symbol_from_yahoo(symbol, start=start, end=end)
+
+    return rets[symbol]
+
+def returns_func_cn(symbol='hs300', start=None, end=None):
+    """
+    Gets returns for a symbol.
+    Queries Yahoo Finance. Attempts to cache SPY.
+
+    Parameters
+    ----------
+    symbol : str
+        Ticker symbol, in [hs300,zz500 700 800 100].or 6-digit code
+    start : date, optional
+        Earliest date to fetch data for.
+        Defaults to earliest date available.
+    end : date, optional
+        Latest date to fetch data for.
+        Defaults to latest date available.
+
+    Returns
+    -------
+    pd.Series
+        Daily returns for the symbol.
+         - See full explanation in tears.create_full_tear_sheet (returns).
+    """
+    if start is None:
+        start = '1/1/2005'
+    if end is None:
+        end = _1_bday_ago()
+
+    start = get_utc_timestamp(start)
+    end = get_utc_timestamp(end)
+
+    if symbol in INDEX_NAME_CODE.keys():
+        filepath = data_path(symbol+'.csv')
+        rets = get_returns_cached(filepath,
+                                  _get_index_return_from_ifeng_then_sina,
+                                  end,
+                                  url=INDEX_CACHE_URL.get(symbol),
+                                  symbol=symbol,
+                                  start='1/1/2005',
+                                  end=datetime.now())
+        rets = rets[start:end]
+    else:
+        rets = _get_index_return_from_ifeng_then_sina(symbol, start=start, end=end)
 
     return rets[symbol]
 
@@ -480,7 +587,7 @@ def register_return_func(func):
     None
     """
     SETTINGS['returns_func'] = func
-
+register_return_func(returns_func_cn)
 
 def get_symbol_rets(symbol, start=None, end=None):
     """

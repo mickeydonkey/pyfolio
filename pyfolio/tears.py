@@ -102,6 +102,9 @@ def create_full_tear_sheet(returns,
             2004-01-09 12:18:01    483      324.12   'AAPL'
             2004-01-09 12:18:01    122      83.10    'MSFT'
             2004-01-13 14:12:23    -75      340.43   'AAPL'
+    benchmark_rets : pd.Series or str
+        benchmark of strategy, return series or symbol of benchmark e.g. 'hs300',
+        See Also utils.INDEX_NAME_CODE
     gross_lev : pd.Series, optional
         The leverage of a strategy.
          - Time series of the sum of long and short exposure per share
@@ -141,7 +144,9 @@ def create_full_tear_sheet(returns,
     """
 
     if benchmark_rets is None:
-        benchmark_rets = utils.get_symbol_rets('SPY')
+        benchmark_rets = utils.get_symbol_rets('hs300')
+    elif benchmark_rets in utils.INDEX_NAME_CODE.keys():
+        benchmark_rets = utils.get_symbol_rets(benchmark_rets)
 
     # If the strategy's history is longer than the benchmark's, limit strategy
     if returns.index[0] < benchmark_rets.index[0]:
@@ -234,7 +239,7 @@ def create_returns_tear_sheet(returns, live_start_date=None,
     """
 
     if benchmark_rets is None:
-        benchmark_rets = utils.get_symbol_rets('SPY')
+        benchmark_rets = utils.get_symbol_rets('hs300')
         # If the strategy's history is longer than the benchmark's, limit
         # strategy
         if returns.index[0] < benchmark_rets.index[0]:
@@ -633,7 +638,7 @@ def create_interesting_times_tear_sheet(
           :, ['mean', 'min', 'max']], 3))
 
     if benchmark_rets is None:
-        benchmark_rets = utils.get_symbol_rets('SPY')
+        benchmark_rets = utils.get_symbol_rets('hs300')
         # If the strategy's history is longer than the benchmark's, limit
         # strategy
         if returns.index[0] < benchmark_rets.index[0]:
@@ -655,9 +660,9 @@ def create_interesting_times_tear_sheet(
         timeseries.cum_returns(rets_period).plot(
             ax=ax, color='forestgreen', label='algo', alpha=0.7, lw=2)
         timeseries.cum_returns(bmark_interesting[name]).plot(
-            ax=ax, color='gray', label='SPY', alpha=0.6)
+            ax=ax, color='gray', label='HS300', alpha=0.6)
         ax.legend(['algo',
-                   'SPY'],
+                   'HS300'],
                   loc=legend_loc)
         ax.set_title(name, size=14)
         ax.set_ylabel('Returns')
@@ -710,7 +715,7 @@ def create_bayesian_tear_sheet(returns, benchmark_rets=None,
     fama_french = False
     if benchmark_rets is None:
         benchmark_rets = pd.DataFrame(
-            utils.get_symbol_rets('SPY',
+            utils.get_symbol_rets('hs300',
                                   start=returns.index[0],
                                   end=returns.index[-1]))
     # unless user indicates otherwise
