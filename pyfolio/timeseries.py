@@ -750,8 +750,7 @@ def rolling_fama_french(returns, factor_returns=None,
     if factor_returns is None:
         factor_returns = utils.load_portfolio_risk_factors(
             start=returns.index[0], end=returns.index[-1])
-        factor_returns = factor_returns.drop(['Mkt-RF', 'RF'],
-                                             axis='columns')
+        factor_returns = factor_returns[['SMB','HML']]
 
     return rolling_beta(returns, factor_returns,
                         rolling_window=rolling_window)

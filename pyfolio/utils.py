@@ -29,6 +29,7 @@ from . import pos
 from . import txn
 import tushare as ts
 from collections import deque
+import Quandl
 APPROX_BDAYS_PER_MONTH = 21
 APPROX_BDAYS_PER_YEAR = 252
 
@@ -45,7 +46,7 @@ ANNUALIZATION_FACTORS = {
     WEEKLY: WEEKS_PER_YEAR,
     MONTHLY: MONTHS_PER_YEAR
 }
-
+QUANDL_TOKEN = 'oNLkgQjSTwqcGTKyMDF3'
 INDEX_NAME_CODE = {'hs300':'000300',
                    'zz500':'000905',
                    'zz800':'000906',
@@ -56,7 +57,7 @@ INDEX_CACHE_URL = {'hs300':'http://7xrcef.com1.z0.glb.clouddn.com/hs300.csv',
                    'zz800':'http://7xrcef.com1.z0.glb.clouddn.com/zz800.csv',
                    'zz700':'http://7xrcef.com1.z0.glb.clouddn.com/zz700.csv',
                    }
-
+FACTOR_CACHE_URL = 'http://7xrcef.com1.z0.glb.clouddn.com/style_factors.csv'
 def cache_dir():
     """
     return the subdirectory /cache residing in the directory containing utils.py, i.e. /pyfolio/data
@@ -438,6 +439,46 @@ def get_fama_french():
     return five_factors
 
 
+def get_fama_french_cn(authtoken=QUANDL_TOKEN):
+    """
+
+    Parameters
+    ----------
+    authtoken str
+    authtoken to Quandl
+    Returns pd.DataFrame
+    with two columns ['SMB','HML']
+    -------
+
+    """
+    indexName = ["SPDJ/CSP100PV","SPDJ/CSP100PG","SPDJ/CSPSCPG","SPDJ/CSPSCPV","SPDJ/CSP100","SPDJ/CSPSC"]
+    try:
+        all_index = Quandl.get(indexName, authtoken="oNLkgQjSTwqcGTKyMDF3",verbose=True)
+    except Exception as e:
+        print('cant get sp china style data from quandl')
+        return None
+
+    all_index.drop([
+       'SPDJ.CSP100PV - S&P China A 100 Pure Value Index (CNY)',
+       'SPDJ.CSP100PG - S&P China A 100 Pure Growth Index (CNY)',
+       'SPDJ.CSPSCPG - S&P China A SmallCap 300 Pure Growth Index (CNY)',
+       'SPDJ.CSPSCPV - S&P China A SmallCap 300 Pure Value Index (CNY)',
+       'SPDJ.CSP100 - S&P China A 100 Index (CNY)',
+       'SPDJ.CSPSC - S&P China A SmallCap 300 Index (CNY)'],
+        axis=1,inplace=True)
+    simp_ret = all_index.pct_change().dropna()
+
+    simp_ret.index.tz_localize('UTC')
+    simp_ret['SMB'] = (simp_ret['SPDJ.CSPSC - S&P China A SmallCap 300 Index (CNY) TR']
+                     - simp_ret['SPDJ.CSP100 - S&P China A 100 Index (CNY) TR'])
+    simp_ret['HML'] = 0.5*(simp_ret['SPDJ.CSP100PV - S&P China A 100 Pure Value Index (CNY) TR']
+                         +simp_ret['SPDJ.CSPSCPV - S&P China A SmallCap 300 Pure Value Index (CNY) TR']
+                         -simp_ret['SPDJ.CSP100PG - S&P China A 100 Pure Growth Index (CNY) TR']
+                         -simp_ret['SPDJ.CSPSCPG - S&P China A SmallCap 300 Pure Growth Index (CNY) TR'])
+
+    return simp_ret[['SMB', 'HML']]
+
+
 def load_portfolio_risk_factors(filepath_prefix=None, start=None, end=None):
     """
     Loads risk factors Mkt-Rf, SMB, HML, Rf, and UMD.
@@ -463,7 +504,9 @@ def load_portfolio_risk_factors(filepath_prefix=None, start=None, end=None):
     else:
         filepath = filepath_prefix
 
-    five_factors = get_returns_cached(filepath, get_fama_french, end)
+    ##five_factors contains only two factors actually
+    five_factors = get_returns_cached(filepath, get_fama_french_cn, end
+                                      ,url=FACTOR_CACHE_URL)
 
     return five_factors.loc[start:end]
 
