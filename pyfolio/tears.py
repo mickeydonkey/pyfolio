@@ -147,7 +147,8 @@ def create_full_tear_sheet(returns,
         benchmark_rets = utils.get_symbol_rets('hs300')
     elif benchmark_rets in utils.INDEX_NAME_CODE.keys():
         benchmark_rets = utils.get_symbol_rets(benchmark_rets)
-
+    if sector_mappings is None:
+        sector_mappings = utils.get_sector_mapping()
     # If the strategy's history is longer than the benchmark's, limit strategy
     if returns.index[0] < benchmark_rets.index[0]:
         returns = returns[returns.index > benchmark_rets.index[0]]
@@ -236,6 +237,10 @@ def create_returns_tear_sheet(returns, live_start_date=None,
         If True, returns the figure that was plotted on.
     set_context : boolean, optional
         If True, set default plotting style context.
+
+    Returns
+    -------
+    object
     """
 
     if benchmark_rets is None:

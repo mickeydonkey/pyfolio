@@ -30,6 +30,7 @@ from . import txn
 import tushare as ts
 from collections import deque
 import Quandl
+import json
 APPROX_BDAYS_PER_MONTH = 21
 APPROX_BDAYS_PER_YEAR = 252
 
@@ -417,6 +418,11 @@ def vectorize(func):
             return df.apply(func, *args, **kwargs)
 
     return wrapper
+
+def get_sector_mapping():
+    filepath = data_path('sector.json')
+    sector_dict = json.load(open(filepath))
+    return sector_dict
 
 
 def get_fama_french():
