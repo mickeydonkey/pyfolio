@@ -421,7 +421,7 @@ def vectorize(func):
 
 def get_sector_mapping():
     filepath = data_path('sector.json')
-    sector_dict = json.load(open(filepath))
+    sector_dict = json.load(open(filepath, encoding='utf-8'))
     return sector_dict
 
 

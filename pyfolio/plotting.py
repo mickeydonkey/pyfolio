@@ -35,6 +35,22 @@ from . import txn
 from .utils import APPROX_BDAYS_PER_MONTH
 
 from functools import wraps
+from matplotlib import rcParams
+
+
+from matplotlib.font_manager import FontProperties
+import sys
+
+rcParams['font.sans-serif'] = ['Droid Sans Fallback'] + rcParams['font.sans-serif']
+font_cn = None
+
+## set default Hei font for diff platform
+if sys.platform == 'win32':
+    font_cn = FontProperties("Microsoft YaHei")
+elif sys.platform.startswith('linux'):
+    font_cn = FontProperties('Droid Sans Fallback')
+elif sys.platform == 'darwin':
+    font_cn = FontProperties('Hiragino Sans GB')
 
 
 def plotting_context(func):
@@ -954,7 +970,7 @@ def show_and_plot_top_positions(returns, positions_alloc,
         df_cum_rets = timeseries.cum_returns(returns, starting_value=1)
         ax.set_xlim((df_cum_rets.index[0], df_cum_rets.index[-1]))
         ax.set_ylabel('Exposure by stock')
-
+        set_font(ax)
         if hide_positions:
             ax.legend_.remove()
 
@@ -1029,8 +1045,15 @@ def plot_sector_allocations(returns, sector_alloc, ax=None, **kwargs):
 
     ax.set_xlim((sector_alloc.index[0], sector_alloc.index[-1]))
     ax.set_ylabel('Exposure by sector')
+    set_font(ax)
 
     return ax
+
+
+def set_font(ax,font=font_cn):
+    labels = ax.legend_.texts
+    for label in labels :
+        label.set_fontproperties(font)
 
 
 def plot_return_quantiles(returns, df_weekly, df_monthly, ax=None, **kwargs):
