@@ -665,9 +665,9 @@ def create_interesting_times_tear_sheet(
         timeseries.cum_returns(rets_period).plot(
             ax=ax, color='forestgreen', label='algo', alpha=0.7, lw=2)
         timeseries.cum_returns(bmark_interesting[name]).plot(
-            ax=ax, color='gray', label='HS300', alpha=0.6)
+            ax=ax, color='gray', label='index', alpha=0.6)
         ax.legend(['algo',
-                   'HS300'],
+                   'index'],
                   loc=legend_loc)
         ax.set_title(name, size=14)
         ax.set_ylabel('Returns')

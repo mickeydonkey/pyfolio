@@ -49,7 +49,8 @@ install_reqs = [
     'scipy>=0.14.0',
     'seaborn>=0.6.0',
     'pandas-datareader>=0.2',
-    'Quandl>=2.8.9'
+    'Quandl>=2.8.9',
+    'tushare>=0.4.3'
 ]
 
 extras_reqs = {
