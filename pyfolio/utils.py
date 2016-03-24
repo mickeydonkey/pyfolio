@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from __future__ import division
-from datetime import datetime
+from datetime import datetime, timedelta
 import errno
 from os import makedirs, environ
 from os.path import expanduser, join, getmtime, isdir ,realpath, dirname
@@ -53,12 +53,12 @@ INDEX_NAME_CODE = {'hs300':'000300',
                    'zz800':'000906',
                    'zz700':'000906',
                   }
-INDEX_CACHE_URL = {'hs300':'http://7xrcef.com1.z0.glb.clouddn.com/hs300.csv',
-                   'zz500':'http://7xrcef.com1.z0.glb.clouddn.com/zz500.csv',
-                   'zz800':'http://7xrcef.com1.z0.glb.clouddn.com/zz800.csv',
-                   'zz700':'http://7xrcef.com1.z0.glb.clouddn.com/zz700.csv',
+INDEX_CACHE_URL = {'hs300':'http://7xs8hy.com1.z0.glb.clouddn.com/hs300.csv',
+                   'zz500':'http://7xs8hy.com1.z0.glb.clouddn.com/zz500.csv',
+                   'zz800':'http://7xs8hy.com1.z0.glb.clouddn.com/zz800.csv',
+                   'zz700':'http://7xs8hy.com1.z0.glb.clouddn.com/zz700.csv',
                    }
-FACTOR_CACHE_URL = 'http://7xrcef.com1.z0.glb.clouddn.com/style_factors.csv'
+FACTOR_CACHE_URL = 'http://7xs8hy.com1.z0.glb.clouddn.com/style_factors.csv'
 def cache_dir():
     """
     return the subdirectory /cache residing in the directory containing utils.py, i.e. /pyfolio/data
@@ -273,11 +273,11 @@ def get_index_return_from_sina(code, start=None, end=None):
 
     """
     sina_data = ts.get_h_data(code, start=start, end=end, index=True)
+    sina_data.sort_index(ascending=True, inplace=True)
     rets = sina_data[['close']].pct_change().dropna()
     rets.index = rets.index.tz_localize("UTC")
-    rets.sort_index(ascending=True, inplace=True)
     return rets
-
+'''
 def get_index_return_from_ifeng(code, start=None, end=None):
     """
 
@@ -291,11 +291,12 @@ def get_index_return_from_ifeng(code, start=None, end=None):
     -------
 
     """
-    code = 'sh'+code
+    #code = 'sh'+code
+
     ifeng_data = ts.get_hist_data(code=code, start=start, end=end)
+    ifeng_data.sort_index(ascending=True, inplace=True)
     rets = ifeng_data[['close']].pct_change().dropna()
     rets.index = rets.index.astype('datetime64').tz_localize('UTC')
-    rets.sort_index(ascending=True, inplace=True)
     return rets
 
 def _get_index_return_from_ifeng_then_sina(symbol, start=None, end=None):
@@ -312,6 +313,20 @@ def _get_index_return_from_ifeng_then_sina(symbol, start=None, end=None):
             index_return = get_index_return_from_sina(code, start=None, end=None)
         except Exception as e:
             raise e
+    index_return.columns = [symbol]
+    index_return.index.name = 'Date'
+    return index_return
+'''
+def _get_index_return_from_sina(symbol, start=None, end=None):
+    try:
+        code = INDEX_NAME_CODE.get(symbol)
+    except KeyError as e:
+        if symbol.isdigit():
+            code = symbol
+    try:
+        index_return = get_index_return_from_sina(code, start=start, end=end)
+    except Exception as e:
+        raise e
     index_return.columns = [symbol]
     index_return.index.name = 'Date'
     return index_return
@@ -393,15 +408,15 @@ def returns_func_cn(symbol='hs300', start=None, end=None):
     if symbol in INDEX_NAME_CODE.keys():
         filepath = data_path(symbol+'.csv')
         rets = get_returns_cached(filepath,
-                                  _get_index_return_from_ifeng_then_sina,
+                                  _get_index_return_from_sina,
                                   end,
                                   url=INDEX_CACHE_URL.get(symbol),
                                   symbol=symbol,
-                                  start='1/1/2005',
-                                  end=datetime.now())
+                                  start='2015-12-31',
+                                  end=str(end)[:10])
         rets = rets[start:end]
     else:
-        rets = _get_index_return_from_ifeng_then_sina(symbol, start=start, end=end)
+        rets = _get_index_return_from_sina(symbol, start=start, end=end)
 
     return rets[symbol]
 
