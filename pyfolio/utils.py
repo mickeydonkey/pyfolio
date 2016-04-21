@@ -199,7 +199,7 @@ def get_returns_cached(filepath, update_func, latest_dt, url=None, **kwargs):
                     )
 
         try:
-            _append_cache_file(filepath,dirty_returns)
+            _append_cache_file(filepath, dirty_returns)
         except OSError as e:
             warnings.warn(
                 'could not append cache {}. {}: {}'.format(
@@ -528,7 +528,7 @@ def load_portfolio_risk_factors(filepath_prefix=None, start=None, end=None):
 
     ##five_factors contains only two factors actually
     five_factors = get_returns_cached(filepath, get_fama_french_cn, end
-                                      ,url=FACTOR_CACHE_URL)
+                                      , url=FACTOR_CACHE_URL)
 
     return five_factors.loc[start:end]
 
