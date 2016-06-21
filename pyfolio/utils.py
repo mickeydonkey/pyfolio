@@ -30,7 +30,7 @@ from . import pos
 from . import txn
 import tushare as ts
 from collections import deque
-import Quandl
+import quandl
 import json
 APPROX_BDAYS_PER_MONTH = 21
 APPROX_BDAYS_PER_YEAR = 252
@@ -467,7 +467,7 @@ def get_fama_french_cn(authtoken=QUANDL_TOKEN):
     Parameters
     ----------
     authtoken str
-    authtoken to Quandl
+    authtoken to quandl
     Returns pd.DataFrame
     with two columns ['SMB','HML']
     -------
@@ -475,28 +475,28 @@ def get_fama_french_cn(authtoken=QUANDL_TOKEN):
     """
     indexName = ["SPDJ/CSP100PV","SPDJ/CSP100PG","SPDJ/CSPSCPG","SPDJ/CSPSCPV","SPDJ/CSP100","SPDJ/CSPSC"]
     try:
-        all_index = Quandl.get(indexName, authtoken="oNLkgQjSTwqcGTKyMDF3",verbose=True)
+        all_index = quandl.get(indexName, authtoken="oNLkgQjSTwqcGTKyMDF3")
     except Exception as e:
         print('cant get sp china style data from quandl')
         return None
 
     all_index.drop([
-       'SPDJ.CSP100PV - S&P China A 100 Pure Value Index (CNY)',
-       'SPDJ.CSP100PG - S&P China A 100 Pure Growth Index (CNY)',
-       'SPDJ.CSPSCPG - S&P China A SmallCap 300 Pure Growth Index (CNY)',
-       'SPDJ.CSPSCPV - S&P China A SmallCap 300 Pure Value Index (CNY)',
-       'SPDJ.CSP100 - S&P China A 100 Index (CNY)',
-       'SPDJ.CSPSC - S&P China A SmallCap 300 Index (CNY)'],
+       'SPDJ/CSP100PV - S&P China A 100 Pure Value Index (CNY)',
+       'SPDJ/CSP100PG - S&P China A 100 Pure Growth Index (CNY)',
+       'SPDJ/CSPSCPG - S&P China A SmallCap 300 Pure Growth Index (CNY)',
+       'SPDJ/CSPSCPV - S&P China A SmallCap 300 Pure Value Index (CNY)',
+       'SPDJ/CSP100 - S&P China A 100 Index (CNY)',
+       'SPDJ/CSPSC - S&P China A SmallCap 300 Index (CNY)'],
         axis=1,inplace=True)
     simp_ret = all_index.pct_change().dropna()
 
     simp_ret.index.tz_localize('UTC')
-    simp_ret['SMB'] = (simp_ret['SPDJ.CSPSC - S&P China A SmallCap 300 Index (CNY) TR']
-                     - simp_ret['SPDJ.CSP100 - S&P China A 100 Index (CNY) TR'])
-    simp_ret['HML'] = 0.5*(simp_ret['SPDJ.CSP100PV - S&P China A 100 Pure Value Index (CNY) TR']
-                         +simp_ret['SPDJ.CSPSCPV - S&P China A SmallCap 300 Pure Value Index (CNY) TR']
-                         -simp_ret['SPDJ.CSP100PG - S&P China A 100 Pure Growth Index (CNY) TR']
-                         -simp_ret['SPDJ.CSPSCPG - S&P China A SmallCap 300 Pure Growth Index (CNY) TR'])
+    simp_ret['SMB'] = (simp_ret['SPDJ/CSPSC - S&P China A SmallCap 300 Index (CNY) TR']
+                     - simp_ret['SPDJ/CSP100 - S&P China A 100 Index (CNY) TR'])
+    simp_ret['HML'] = 0.5*(simp_ret['SPDJ/CSP100PV - S&P China A 100 Pure Value Index (CNY) TR']
+                         +simp_ret['SPDJ/CSPSCPV - S&P China A SmallCap 300 Pure Value Index (CNY) TR']
+                         -simp_ret['SPDJ/CSP100PG - S&P China A 100 Pure Growth Index (CNY) TR']
+                         -simp_ret['SPDJ/CSPSCPG - S&P China A SmallCap 300 Pure Growth Index (CNY) TR'])
 
     return simp_ret[['SMB', 'HML']]
 
