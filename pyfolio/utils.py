@@ -48,7 +48,7 @@ ANNUALIZATION_FACTORS = {
     WEEKLY: WEEKS_PER_YEAR,
     MONTHLY: MONTHS_PER_YEAR
 }
-QUANDL_TOKEN = 'oNLkgQjSTwqcGTKyMDF3'
+QUANDL_TOKEN = '' # empty token is fine
 INDEX_NAME_CODE = {'hs300':'000300',
                    'zz500':'000905',
                    'zz800':'000906',
@@ -475,7 +475,7 @@ def get_fama_french_cn(authtoken=QUANDL_TOKEN):
     """
     indexName = ["SPDJ/CSP100PV","SPDJ/CSP100PG","SPDJ/CSPSCPG","SPDJ/CSPSCPV","SPDJ/CSP100","SPDJ/CSPSC"]
     try:
-        all_index = quandl.get(indexName, authtoken="oNLkgQjSTwqcGTKyMDF3")
+        all_index = quandl.get(indexName, authtoken=authtoken)
     except Exception as e:
         print('cant get sp china style data from quandl')
         return None
