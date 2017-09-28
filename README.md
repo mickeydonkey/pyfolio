@@ -1,5 +1,10 @@
 # pyfolio
 
+## A股本地化介绍
+ - 从新浪财经获取基准指数的点位
+ - SMB HML风格因子收益率的计算来自 S&P中国A股风格指数（从quandl获取）
+ - 使用申万行业分类作为行业分类标准
+
 [![Join the chat at https://gitter.im/quantopian/pyfolio](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/quantopian/pyfolio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![build status](https://travis-ci.org/quantopian/pyfolio.png?branch=master)](https://travis-ci.org/quantopian/pyfolio)
 
